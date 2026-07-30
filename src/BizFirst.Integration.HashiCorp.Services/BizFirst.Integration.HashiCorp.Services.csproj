@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RootNamespace>BizFirst.Integration.HashiCorp.Services</RootNamespace>
+    <AssemblyName>BizFirst.Integration.HashiCorp.Services</AssemblyName>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.17" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.17" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.17" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BizFirst.Integration.HashiCorp.Domain\BizFirst.Integration.HashiCorp.Domain.csproj" />
+    <!-- ICredentialResolver lives here — used to resolve the node's own Vault auth material (token or AppRole pair) -->
+    <ProjectReference Include="..\..\..\..\ProcessEngine\BizFirst.Ai.ProcessEngine.Domain\BizFirst.Ai.ProcessEngine.Domain.csproj" />
+  </ItemGroup>
+</Project>

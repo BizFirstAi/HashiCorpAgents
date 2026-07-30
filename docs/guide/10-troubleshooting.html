@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Troubleshooting | HashiCorp — BizFirstAI</title>
+<link rel="stylesheet" href="https://bizfirstai.github.io/UserGuides/styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+.bfai-topbar-logo img{height:26px;display:block;}.bfai-topbar{position:fixed;top:0;left:0;right:0;z-index:200;background:#1e2736;border-bottom:1px solid #2d3a4a;height:40px;display:flex;align-items:center;padding:0 20px;}
+.bfai-topbar-right{margin-left:auto;display:flex;gap:6px;}
+.bfai-topbar-right a{font-size:12px;color:#b0c4d8;text-decoration:none;padding:4px 12px;border-radius:5px;display:flex;align-items:center;gap:6px;transition:background 0.15s,color 0.15s;}
+.bfai-topbar-right a:hover{background:rgba(255,255,255,0.08);color:#fff;}
+body{padding-top:40px;}
+nav.sidebar{top:40px;height:calc(100vh - 40px);}
+</style>
+</head>
+<body>
+
+<div class="bfai-topbar">
+  <a href="https://bizfirstai.com" target="_blank" class="bfai-topbar-logo">
+    <img src="https://www.bizfirstai.com/website/assets/Logo/logo.png" alt="BizFirstAI">
+  </a>
+  <div class="bfai-topbar-right">
+    <a href="https://bizfirstai.github.io/UserGuides/" target="_top"><i class="fa-solid fa-house"></i> Portal</a>
+    <a href="https://community.bizfirstai.com" target="_blank"><i class="fa-solid fa-people-group"></i> Community</a>
+  </div>
+</div>
+
+<nav class="sidebar">
+  <div class="sidebar-brand">HashiCorp<span>Node Reference</span></div>
+  <div class="sidebar-section">This Node</div>
+  <a href="index.html">Overview</a>
+  <a href="01-configuration.html">Configuration</a>
+  <a href="02-authentication.html">Authentication</a>
+  <a href="03-secrets-operations.html">Secrets Operations</a>
+  <a href="04-token-operations.html">Token Operations</a>
+  <a href="05-lease-operations.html">Lease Operations</a>
+  <a href="06-system-operations.html">System Operations</a>
+  <a href="07-input-output.html">Input &amp; Output</a>
+  <a href="08-error-codes.html">Error Codes</a>
+  <a href="09-examples.html">Examples</a>
+  <a href="10-troubleshooting.html" class="active">Troubleshooting</a>
+  <a href="11-roadmap.html">Roadmap</a>
+  <div class="sidebar-section">Navigation</div>
+  <a href="https://bizfirstai.github.io/UserGuides/Nodes/">&#8592; All Nodes</a>
+  <a href="https://bizfirstai.github.io/UserGuides/">&#8592; Portal</a>
+</nav>
+
+<main>
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="https://bizfirstai.github.io/UserGuides/" style="color:inherit;text-decoration:none;">BizFirstAI Portal</a> /
+      <a href="https://bizfirstai.github.io/UserGuides/Nodes/" style="color:inherit;text-decoration:none;">Nodes</a> /
+      <a href="index.html">HashiCorp</a> /
+      Troubleshooting
+    </div>
+    <h1>Troubleshooting</h1>
+    <p class="subtitle">Common issues, sealed vaults, and AppRole gotchas</p>
+  </div>
+
+  <div class="callout danger">
+    <strong>HASHICORP_SEALED on every authenticated call</strong><br>
+    Vault is sealed and cannot serve authenticated requests.
+    <br><strong>Fix:</strong> Run <code>system/sealStatus</code> (see <a href="06-system-operations.html">System Operations</a>) —
+    it answers even while sealed. Unseal Vault out of band, then retry.
+  </div>
+
+  <div class="callout danger">
+    <strong>HASHICORP_AUTH_FAILED that "used to work"</strong><br>
+    Most often a single-use AppRole <code>secret_id</code> that has already been consumed. The
+    credential resolver caches the exchanged client token per <code>credentialID</code>, so calls keep
+    working until that cached token expires — then, with no <code>secret_id</code> left to log in again,
+    every subsequent call fails.
+    <br><strong>Fix:</strong> Reconfigure the AppRole with <code>secret_id_num_uses = 0</code> (unlimited)
+    for any credential this node authenticates with. See
+    <a href="02-authentication.html">Authentication</a> and <a href="11-roadmap.html">Roadmap</a>.
+  </div>
+
+  <div class="callout danger">
+    <strong>HASHICORP_INVALID_CONFIGURATION</strong><br>
+    A required config key is missing or malformed: no <code>vaultAddress</code>, <code>authMethod</code>
+    isn't exactly <code>"token"</code> or <code>"appRole"</code>, no <code>credentialID</code>, no
+    <code>mount</code> on a Secrets operation, or a <code>namespace</code> with a leading/trailing slash
+    or empty segment.
+    <br><strong>Fix:</strong> Check the exact field list on that operation's page — see
+    <a href="03-secrets-operations.html">Secrets</a>, <a href="04-token-operations.html">Token</a>,
+    <a href="05-lease-operations.html">Lease</a>, or <a href="06-system-operations.html">System</a>
+    Operations.
+  </div>
+
+  <div class="callout warning">
+    <strong>HASHICORP_CAS_MISMATCH on secrets/write</strong><br>
+    Someone else wrote a newer version at that path since you last read it, or your <code>cas</code>
+    value doesn't match the path's current version.
+    <br><strong>Fix:</strong> Re-read the secret (<code>secrets/read</code>) to get the current
+    <code>version</code>, then retry the write with that value as <code>cas</code>. See
+    <a href="09-examples.html">Examples</a> #2.
+  </div>
+
+  <div class="callout warning">
+    <strong>secrets/list returns an empty result for a path you know has keys</strong><br>
+    Vault returns HTTP 404 for a genuinely empty LIST path, which this node normalizes into an empty
+    success — so an actually-empty folder and a not-yet-created folder look identical in the response.
+    <br><strong>Fix:</strong> Confirm <code>mount</code>/<code>path</code>/<code>engineVersion</code> are
+    exactly right — v1 and v2 list from different underlying Vault paths internally even though the
+    config fields you supply look the same.
+  </div>
+
+  <div class="callout warning">
+    <strong>secrets/undelete, destroy, readMetadata, or updateMetadata error with no v1 support</strong><br>
+    These four operations only exist on KV v2. v1 has no versioning or soft-delete concept at all.
+    <br><strong>Fix:</strong> Confirm <code>engineVersion</code> is <code>"2"</code> (the default) for
+    the mount in question, or migrate the mount to v2 if it's still on v1.
+  </div>
+
+  <div class="callout warning">
+    <strong>HASHICORP_LEASE_NOT_RENEWABLE on lease/renew or token/renewSelf</strong><br>
+    Some Vault-issued leases and tokens are marked non-renewable by policy — no amount of retrying will
+    make this succeed.
+    <br><strong>Fix:</strong> Use <code>lease/lookup</code> or <code>token/lookupSelf</code> first to
+    check <code>renewable</code> before attempting a renew; if false, the workflow needs a fresh
+    credential/lease instead.
+  </div>
+
+  <div class="callout warning">
+    <strong>HASHICORP_VAULT_UNREACHABLE</strong><br>
+    No HTTP response was received at all — DNS failure, connection refused, TLS handshake failure, or a
+    timeout past the retry window (<code>MaxRetries</code>: 2, doubling backoff from 1s).
+    <br><strong>Fix:</strong> Verify <code>vaultAddress</code> is correct and reachable from wherever the
+    workflow executes (network/firewall/VPN), and that its TLS certificate is trusted.
+  </div>
+
+  <div class="callout danger">
+    <strong>Attempting Transit (encrypt/decrypt), or Kubernetes/LDAP/Okta/JWT/cert auth</strong><br>
+    None of these exist on this node today — only KV secrets/token/lease/system, and only Token/AppRole
+    auth methods.
+    <br><strong>Fix:</strong> See <a href="11-roadmap.html">Roadmap</a> for what's flagged as future scope
+    versus deliberately excluded.
+  </div>
+
+</main>
+</body>
+</html>

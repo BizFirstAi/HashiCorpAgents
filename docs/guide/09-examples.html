@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Examples | HashiCorp — BizFirstAI</title>
+<link rel="stylesheet" href="https://bizfirstai.github.io/UserGuides/styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+.bfai-topbar-logo img{height:26px;display:block;}.bfai-topbar{position:fixed;top:0;left:0;right:0;z-index:200;background:#1e2736;border-bottom:1px solid #2d3a4a;height:40px;display:flex;align-items:center;padding:0 20px;}
+.bfai-topbar-right{margin-left:auto;display:flex;gap:6px;}
+.bfai-topbar-right a{font-size:12px;color:#b0c4d8;text-decoration:none;padding:4px 12px;border-radius:5px;display:flex;align-items:center;gap:6px;transition:background 0.15s,color 0.15s;}
+.bfai-topbar-right a:hover{background:rgba(255,255,255,0.08);color:#fff;}
+body{padding-top:40px;}
+nav.sidebar{top:40px;height:calc(100vh - 40px);}
+</style>
+</head>
+<body>
+
+<div class="bfai-topbar">
+  <a href="https://bizfirstai.com" target="_blank" class="bfai-topbar-logo">
+    <img src="https://www.bizfirstai.com/website/assets/Logo/logo.png" alt="BizFirstAI">
+  </a>
+  <div class="bfai-topbar-right">
+    <a href="https://bizfirstai.github.io/UserGuides/" target="_top"><i class="fa-solid fa-house"></i> Portal</a>
+    <a href="https://community.bizfirstai.com" target="_blank"><i class="fa-solid fa-people-group"></i> Community</a>
+  </div>
+</div>
+
+<nav class="sidebar">
+  <div class="sidebar-brand">HashiCorp<span>Node Reference</span></div>
+  <div class="sidebar-section">This Node</div>
+  <a href="index.html">Overview</a>
+  <a href="01-configuration.html">Configuration</a>
+  <a href="02-authentication.html">Authentication</a>
+  <a href="03-secrets-operations.html">Secrets Operations</a>
+  <a href="04-token-operations.html">Token Operations</a>
+  <a href="05-lease-operations.html">Lease Operations</a>
+  <a href="06-system-operations.html">System Operations</a>
+  <a href="07-input-output.html">Input &amp; Output</a>
+  <a href="08-error-codes.html">Error Codes</a>
+  <a href="09-examples.html" class="active">Examples</a>
+  <a href="10-troubleshooting.html">Troubleshooting</a>
+  <a href="11-roadmap.html">Roadmap</a>
+  <div class="sidebar-section">Navigation</div>
+  <a href="https://bizfirstai.github.io/UserGuides/Nodes/">&#8592; All Nodes</a>
+  <a href="https://bizfirstai.github.io/UserGuides/">&#8592; Portal</a>
+</nav>
+
+<main>
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="https://bizfirstai.github.io/UserGuides/" style="color:inherit;text-decoration:none;">BizFirstAI Portal</a> /
+      <a href="https://bizfirstai.github.io/UserGuides/Nodes/" style="color:inherit;text-decoration:none;">Nodes</a> /
+      <a href="index.html">HashiCorp</a> /
+      Examples
+    </div>
+    <h1>Examples</h1>
+    <p class="subtitle">Worked workflow patterns using this node</p>
+  </div>
+
+  <h2>1. Pre-flight check before a batch of secret reads</h2>
+  <p>Confirm the vault is reachable and unsealed before spending an authenticated call on anything else.</p>
+  <pre><code>Step 1 — HashiCorp: system/sealStatus
+  vaultAddress: https://vault.internal.example.com:8200
+→ if sealed == true: route to notification/error path
+→ if sealed == false: continue
+
+Step 2 — HashiCorp: secrets/read
+  vaultAddress: https://vault.internal.example.com:8200
+  authMethod: token
+  credentialID: 42
+  mount: secret
+  path: myapp/db-creds</code></pre>
+
+  <h2>2. Rotate a config value with Check-And-Set</h2>
+  <p>Read the current version first, then write with <code>cas</code> set to that version so a concurrent
+  writer can't silently overwrite the change.</p>
+  <pre><code>Step 1 — HashiCorp: secrets/read
+  mount: secret, path: myapp/feature-flags
+→ output.version = 7
+
+Step 2 — HashiCorp: secrets/write
+  mount: secret, path: myapp/feature-flags
+  data: { "newFeatureEnabled": "true" }
+  cas: 7   # from Step 1's output.version
+→ fails with HASHICORP_CAS_MISMATCH if someone else wrote version 8 in between</code></pre>
+
+  <h2>3. Use, then revoke, a dynamic database credential</h2>
+  <p>A database secrets engine (issued outside this node) hands your workflow a lease ID; this node
+  manages that lease's lifecycle.</p>
+  <pre><code>Step 1 — (database engine, elsewhere) issues:
+  leaseID = "database/creds/readonly/2f6a19b3"
+
+Step 2 — HashiCorp: lease/lookup
+  leaseID: database/creds/readonly/2f6a19b3
+→ output.ttl = 900 (comfortably covers the next step)
+
+Step 3 — (use the dynamic DB credential for the workflow's actual database work)
+
+Step 4 — HashiCorp: lease/revoke
+  leaseID: database/creds/readonly/2f6a19b3
+→ credential stops working immediately, instead of waiting out its TTL</code></pre>
+
+  <h2>4. Credential health check at workflow start</h2>
+  <p><code>token/lookupSelf</code> mutates nothing, so it's a safe first step to confirm the resolved
+  credential is still valid and see how much TTL is left.</p>
+  <pre><code>Step 1 — HashiCorp: token/lookupSelf
+  authMethod: appRole
+  credentialID: 17
+→ output.ttl = 2764800, output.renewable = true
+→ if ttl is low and renewable: HashiCorp token/renewSelf before continuing
+→ if renewable == false: notify that the credential needs re-issuing out of band</code></pre>
+
+  <h2>5. Cleanup a delegated child token at the end of a workflow</h2>
+  <pre><code>Step 1 — (earlier, some admin process minted a child token and handed the workflow its accessor)
+  accessor = "8cLxNRJj..."
+
+Step 2 — HashiCorp: token/revokeByAccessor
+  accessor: 8cLxNRJj...
+→ the child token stops working immediately</code></pre>
+
+  <div class="callout success">
+    <strong>Pattern to reuse:</strong> pair a <code>lookup*</code>/<code>sealStatus</code> read as a
+    guard step before any authenticated write, and pair every dynamic credential your workflow consumes
+    with an explicit <code>lease/revoke</code> once the workflow no longer needs it.
+  </div>
+
+</main>
+</body>
+</html>

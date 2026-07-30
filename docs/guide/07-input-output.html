@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Input &amp; Output | HashiCorp — BizFirstAI</title>
+<link rel="stylesheet" href="https://bizfirstai.github.io/UserGuides/styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+.bfai-topbar-logo img{height:26px;display:block;}.bfai-topbar{position:fixed;top:0;left:0;right:0;z-index:200;background:#1e2736;border-bottom:1px solid #2d3a4a;height:40px;display:flex;align-items:center;padding:0 20px;}
+.bfai-topbar-right{margin-left:auto;display:flex;gap:6px;}
+.bfai-topbar-right a{font-size:12px;color:#b0c4d8;text-decoration:none;padding:4px 12px;border-radius:5px;display:flex;align-items:center;gap:6px;transition:background 0.15s,color 0.15s;}
+.bfai-topbar-right a:hover{background:rgba(255,255,255,0.08);color:#fff;}
+body{padding-top:40px;}
+nav.sidebar{top:40px;height:calc(100vh - 40px);}
+</style>
+</head>
+<body>
+
+<div class="bfai-topbar">
+  <a href="https://bizfirstai.com" target="_blank" class="bfai-topbar-logo">
+    <img src="https://www.bizfirstai.com/website/assets/Logo/logo.png" alt="BizFirstAI">
+  </a>
+  <div class="bfai-topbar-right">
+    <a href="https://bizfirstai.github.io/UserGuides/" target="_top"><i class="fa-solid fa-house"></i> Portal</a>
+    <a href="https://community.bizfirstai.com" target="_blank"><i class="fa-solid fa-people-group"></i> Community</a>
+  </div>
+</div>
+
+<nav class="sidebar">
+  <div class="sidebar-brand">HashiCorp<span>Node Reference</span></div>
+  <div class="sidebar-section">This Node</div>
+  <a href="index.html">Overview</a>
+  <a href="01-configuration.html">Configuration</a>
+  <a href="02-authentication.html">Authentication</a>
+  <a href="03-secrets-operations.html">Secrets Operations</a>
+  <a href="04-token-operations.html">Token Operations</a>
+  <a href="05-lease-operations.html">Lease Operations</a>
+  <a href="06-system-operations.html">System Operations</a>
+  <a href="07-input-output.html" class="active">Input &amp; Output</a>
+  <a href="08-error-codes.html">Error Codes</a>
+  <a href="09-examples.html">Examples</a>
+  <a href="10-troubleshooting.html">Troubleshooting</a>
+  <a href="11-roadmap.html">Roadmap</a>
+  <div class="sidebar-section">Navigation</div>
+  <a href="https://bizfirstai.github.io/UserGuides/Nodes/">&#8592; All Nodes</a>
+  <a href="https://bizfirstai.github.io/UserGuides/">&#8592; Portal</a>
+</nav>
+
+<main>
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="https://bizfirstai.github.io/UserGuides/" style="color:inherit;text-decoration:none;">BizFirstAI Portal</a> /
+      <a href="https://bizfirstai.github.io/UserGuides/Nodes/" style="color:inherit;text-decoration:none;">Nodes</a> /
+      <a href="index.html">HashiCorp</a> /
+      Input &amp; Output
+    </div>
+    <h1>Input &amp; Output</h1>
+    <p class="subtitle">The shared config-key pattern across every operation, and how results are shaped</p>
+  </div>
+
+  <h2>Shared Input Pattern</h2>
+  <p>Every operation takes the same top-level config keys, plus its own operation-specific fields listed
+  on that resource's page:</p>
+  <table>
+    <thead><tr><th>Key</th><th>Required</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>resource</code></td><td>✓ Yes</td><td>One of <code>secrets</code>, <code>token</code>, <code>lease</code>, <code>system</code>.</td></tr>
+      <tr><td><code>operation</code></td><td>✓ Yes</td><td>The operation within that resource, e.g. <code>read</code>.</td></tr>
+      <tr><td><code>vaultAddress</code></td><td>✓ Yes</td><td>The tenant's Vault server base URL. No default exists.</td></tr>
+      <tr><td><code>authMethod</code></td><td>✓ Yes*</td><td><code>"token"</code> or <code>"appRole"</code>. *Omitted for <code>system/health</code> and <code>system/sealStatus</code>.</td></tr>
+      <tr><td><code>credentialID</code></td><td>✓ Yes*</td><td>BizFirst credential record ID. *Same exemption as above.</td></tr>
+      <tr><td><code>appRolePath</code></td><td>No</td><td>Vault auth mount path, default <code>"approle"</code>.</td></tr>
+      <tr><td><code>namespace</code></td><td>No</td><td>Vault Enterprise namespace.</td></tr>
+      <tr><td><code>mount</code></td><td>✓ Yes**</td><td>KV engine mount path. **<code>secrets</code> operations only.</td></tr>
+      <tr><td><code>engineVersion</code></td><td>No</td><td><code>"1"</code> or <code>"2"</code>, default <code>"2"</code>. <code>secrets</code> operations only.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Output Ports</h2>
+  <p>Like every other ExecutionNode in this platform, the node exposes standard <strong>success</strong>
+  and <strong>error</strong> output ports (initialized via <code>OutputMapping.GetOrCreatePortSuccessAndError()</code>
+  on <code>ValidateExecutorSettings</code>). A successful call routes to the success port with the
+  operation's result fields (documented on each resource's page) plus <code>status</code>,
+  <code>resource</code>, and <code>operation</code> echoed back. List-shaped results (e.g.
+  <code>secrets/list</code>) additionally populate the standard <code>items</code> array so downstream
+  nodes can iterate them the same way they iterate any other node's list output.</p>
+
+  <h2>How Errors Surface</h2>
+  <table>
+    <thead><tr><th>Situation</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Missing/invalid config key (e.g. no <code>vaultAddress</code>, bad <code>authMethod</code>, missing <code>mount</code> on a Secrets op)</td>
+        <td>Fails validation before any HTTP call — <code>HASHICORP_INVALID_CONFIGURATION</code>.</td>
+      </tr>
+      <tr>
+        <td>Credential doesn't resolve to a usable token/AppRole pair</td>
+        <td><code>HASHICORP_CREDENTIAL_NOT_FOUND</code> (token method) or <code>HASHICORP_AUTH_FAILED</code> (AppRole method).</td>
+      </tr>
+      <tr>
+        <td>Vault itself rejects the call (permission, not found, sealed, CAS mismatch, etc.)</td>
+        <td>Mapped to the matching <code>HASHICORP_*</code> code — see <a href="08-error-codes.html">Error Codes</a>.</td>
+      </tr>
+      <tr>
+        <td>Vault is completely unreachable (timeout, DNS failure, connection refused, TLS failure)</td>
+        <td><code>HASHICORP_VAULT_UNREACHABLE</code> — this is <code>HashiCorpApiException</code>'s status-code-0 sentinel, not a real Vault response.</td>
+      </tr>
+      <tr>
+        <td>An unexpected exception (not a Vault API error) during the call</td>
+        <td><code>HASHICORP_UPSTREAM_ERROR</code>, logged with the underlying exception attached.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout info">
+    <strong>Idempotent reads, careful writes:</strong> every <code>read</code>/<code>list</code>/
+    <code>lookup*</code>/<code>health</code>/<code>sealStatus</code> operation is safe to retry. Writes
+    (<code>secrets/write</code>, <code>secrets/delete</code>, <code>secrets/destroy</code>,
+    <code>token/revokeByAccessor</code>, <code>lease/revoke</code>) are not automatically retried by this
+    node and, for the destructive ones, are not reversible — use <code>cas</code> on
+    <code>secrets/write</code> if concurrent writers are a possibility.
+  </div>
+
+</main>
+</body>
+</html>
