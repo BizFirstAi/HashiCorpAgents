@@ -53,24 +53,13 @@ Browse the implementation directly under [`src/`](src/):
 
 ## Documentation
 
-| Page | Published URL |
-|---|---|
-| Operation reference | https://bizfirstai.github.io/HashiCorpAgents/ |
-| Guide: Overview | https://bizfirstai.github.io/HashiCorpAgents/guide/ |
-| Guide: Configuration | https://bizfirstai.github.io/HashiCorpAgents/guide/01-configuration.html |
-| Guide: Authentication | https://bizfirstai.github.io/HashiCorpAgents/guide/02-authentication.html |
-| Guide: Secrets Operations | https://bizfirstai.github.io/HashiCorpAgents/guide/03-secrets-operations.html |
-| Guide: Token Operations | https://bizfirstai.github.io/HashiCorpAgents/guide/04-token-operations.html |
-| Guide: Lease Operations | https://bizfirstai.github.io/HashiCorpAgents/guide/05-lease-operations.html |
-| Guide: System Operations | https://bizfirstai.github.io/HashiCorpAgents/guide/06-system-operations.html |
-| Guide: Input & Output | https://bizfirstai.github.io/HashiCorpAgents/guide/07-input-output.html |
-| Guide: Error Codes | https://bizfirstai.github.io/HashiCorpAgents/guide/08-error-codes.html |
-| Guide: Examples | https://bizfirstai.github.io/HashiCorpAgents/guide/09-examples.html |
-| Guide: Troubleshooting | https://bizfirstai.github.io/HashiCorpAgents/guide/10-troubleshooting.html |
-| Guide: Roadmap | https://bizfirstai.github.io/HashiCorpAgents/guide/11-roadmap.html |
+- **This site:** [hashicorp.bizfirstai.com](https://hashicorp.bizfirstai.com) — quick reference and links
+- **Full guide:** [docs.bizfirstai.com/Nodes/HashiCorp](https://docs.bizfirstai.com/Nodes/HashiCorp/) —
+  configuration, authentication, every resource's operations, examples, troubleshooting
+- **Full developer portal:** [docs.bizfirstai.com](https://docs.bizfirstai.com)
 
-Same guide, also published in the portal: [bizfirstai.github.io/UserGuides/Nodes/HashiCorp](https://bizfirstai.github.io/UserGuides/Nodes/HashiCorp/)
-Full developer portal: [docs.bizfirstai.com](https://docs.bizfirstai.com)
+All BizFirst.Ai node documentation is maintained in one place — the
+[UserGuides](https://github.com/BizFirstAi/UserGuides) portal — rather than duplicated per repo.
 
 ## Project layout
 
@@ -79,6 +68,9 @@ src/
 ├── BizFirst.Integration.HashiCorp.Domain            # Result records + shared value types (zero deps)
 ├── BizFirst.Integration.HashiCorp.Services           # Vault HTTP client + AppRole/Token auth + resource services
 └── BizFirst.Ai.ExecutionNodes.Blockchain.HashiCorp    # Executor: routing, config, operation DTOs
+docs/
+├── index.html  # This site's homepage — quick reference, links out to the full guide
+└── CNAME       # hashicorp.bizfirstai.com
 ```
 
 Targets **.NET 9**.
